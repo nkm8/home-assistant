@@ -117,6 +117,9 @@ actions:
             id:
               - lighton
         sequence:
+          - condition: state
+            entity_id: !input auto_off_controller
+            state: "on"
           - action: timer.start
             metadata: {}
             data: {}
