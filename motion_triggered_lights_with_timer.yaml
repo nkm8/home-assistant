@@ -7,8 +7,10 @@ blueprint:
     one that controls whether the lights will be turned on automatically when motion is detected 
     (e.g. input_boolean.deck_lights_auto_on_controller) and one to control whether the lights are 
     turned off when the timer ends (e.g. input_boolean.deck_lights_auto_off_controller).
+    Includes grace period (seconds) - if the trigger sensor turns back on within this time period 
+    after the lights were turned off, turn them back on.
   domain: automation
-  author: Scott Menzer
+  author: Scott Menzer / Nick
   input:
     trigger_sensor:
       name: Trigger Sensor
@@ -150,17 +152,16 @@ actions:
                   - condition: template
                     value_template: >
                       {{ only_when_sun_is_down == false }}
-            - condition:
-              - condition: not
-                conditions:
-                  - condition: state
-                    entity_id: !input light_target
-                    state:
-                      - "off"
-                    for:
-                      hours: 0
-                      minutes: 0
-                      seconds: 5
+            - condition: not
+              conditions:
+                - condition: state
+                  entity_id: !input light_target
+                  state:
+                    - "off"
+                  for:
+                    hours: 0
+                    minutes: 0
+                    seconds: !input grace_period
           - action: light.turn_on
             alias: "turn on the light(s)"
             data: {}
