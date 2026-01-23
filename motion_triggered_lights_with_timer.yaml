@@ -148,53 +148,53 @@ actions:
               - light-on
               - trigger-off
               - auto-off-enabled
-            sequence:
-              - condition: state
-                entity_id: !input auto_off_controller
-                state: "on"
-              - condition: state
-                entity_id: !input trigger_sensor
-                state: "off"
-              - condition: state
-                entity_id: !input light_target
-                state: "on"
-              - action: timer.start
-                alias: "start the timer"
-                data: {}
-                target:
-                  entity_id: !input auto_off_timer
+        sequence:
+          - condition: state
+            entity_id: !input auto_off_controller
+            state: "on"
+          - condition: state
+            entity_id: !input trigger_sensor
+            state: "off"
+          - condition: state
+            entity_id: !input light_target
+            state: "on"
+          - action: timer.start
+            alias: "start the timer"
+            data: {}
+            target:
+              entity_id: !input auto_off_timer
       - conditions:
           - condition: trigger
             alias: "Cancel timer - ligts off or trigger-off flag is disabled"
             id:
               - light-off
               - auto-off-disabled
-            sequence:
-              - action: timer.cancel
-                metadata: {}
-                data: {}
-                target:
-                  entity_id: !input auto_off_timer
+        sequence:
+          - action: timer.cancel
+            metadata: {}
+            data: {}
+            target:
+              entity_id: !input auto_off_timer
       - conditions:
           - condition: trigger
             id:
               - timer-end
-            sequence:
-              - condition: state
-                entity_id: !input light_target
-                state: "on"
-              - condition: state
-                entity_id: !input trigger_sensor
-                state: "off"
-              - condition: state
-                entity_id: !input auto_off_controller
-                state: "on"
-              - action: light.turn_off
-                metadata: {}
-                data:
-                  entity_id: !input light_target
-                  transition: !input off_transition
-                #target:
-                #  entity_id: !input light_target
+        sequence:
+          - condition: state
+            entity_id: !input light_target
+            state: "on"
+          - condition: state
+            entity_id: !input trigger_sensor
+            state: "off"
+          - condition: state
+            entity_id: !input auto_off_controller
+            state: "on"
+          - action: light.turn_off
+            metadata: {}
+            data:
+              entity_id: !input light_target
+              transition: !input off_transition
+            #target:
+            #  entity_id: !input light_target
 
 mode: queued
