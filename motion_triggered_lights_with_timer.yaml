@@ -163,7 +163,7 @@ actions:
                 entity_id: !input motion_sensor
                 state: "on"
               - condition: state
-                entity_id: input_boolean.deck_lights_auto_on_controller
+                entity_id: !input auto_on_controller
                 state: "on"
             then:
               - action: timer.start
