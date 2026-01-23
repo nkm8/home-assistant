@@ -16,7 +16,9 @@ blueprint:
       selector:
         entity:
           filter:
-            domain: binary_sensor
+            domain: 
+              - binary_sensor
+              - input_boolean
     light_target:
       name: Light
       description: "The light entity to control."
