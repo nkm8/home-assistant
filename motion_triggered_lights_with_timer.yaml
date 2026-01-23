@@ -164,8 +164,8 @@ actions:
               target:
                 entity_id: !input auto_off_timer
       - conditions:
-        alias: "Cancel timer - ligts off or trigger-off flag is disabled"
           - condition: trigger
+            alias: "Cancel timer - ligts off or trigger-off flag is disabled"
             id:
               - light-off
               - auto-off-disabled
