@@ -105,9 +105,21 @@ actions:
   - choose:
       - conditions:
           - condition: trigger
+            alias: "motion/occupancy detected"
             id:
               - trigger-on
         sequence:
+        - if:
+            - alias: "If timer is running"
+              condition: state
+              entity_id: !input auto_off_timer
+              state: active
+          then:
+            - action: timer.cancel
+              alias: "Cancel the timer"
+              data: {}
+              target:
+                entity_id: !input auto_off_timer
           # check if auto-on is enabled
         - condition: state
           entity_id: !input auto_on_controller
@@ -115,8 +127,8 @@ actions:
         - condition: state
           entity_id: !input light_target
           state: "off"
-          # if after sunset or the sun_down toggle is off
         - condition: or
+          alias: "if after sunset or the sun_down toggle is off"
           conditions:
             - condition: sun
               before: sunrise
@@ -124,23 +136,20 @@ actions:
             - condition: template
               value_template: >
                 {{ only_when_sun_is_down == false }}
-          # turn on the light(s)
         - action: light.turn_on
-          metadata: {}
+          alias: "turn on the light(s)"
           data: {}
           target:
             entity_id: !input light_target
 
-        # light-on and trigger-off will start the timer, if needed
       - conditions:
+        alias: "Start the timer - lights on, trigger-off flag enabled, or trigger sensor clears"
           - condition: trigger
             id:
               - light-on
               - trigger-off
               - auto-off-enabled
         sequence:
-          # conditions: auto-off enabled, sensor off, and light is on
-          # action: start the timer
           - condition: state
             entity_id: !input auto_off_controller
             state: "on"
@@ -151,12 +160,12 @@ actions:
             entity_id: !input light_target
             state: "on"
           - action: timer.start
-            metadata: {}
+            alias: "start the timer"
             data: {}
             target:
               entity_id: !input auto_off_timer
-        # if the light turns off outside automation - or auto-off toggle is disabled, cancel timer
       - conditions:
+        alias: "Cancel timer - ligts off or trigger-off flag is disabled"
           - condition: trigger
             id:
               - light-off
@@ -189,5 +198,4 @@ actions:
             #target:
             #  entity_id: !input light_target
 
-mode: restart
-max_exceeded: silent
+mode: queued
