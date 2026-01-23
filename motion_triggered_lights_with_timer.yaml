@@ -141,29 +141,28 @@ actions:
           data: {}
           target:
             entity_id: !input light_target
-
       - conditions:
-        alias: "Start the timer - lights on, trigger-off flag enabled, or trigger sensor clears"
-          - condition: trigger
-            id:
-              - light-on
-              - trigger-off
-              - auto-off-enabled
-        sequence:
-          - condition: state
-            entity_id: !input auto_off_controller
-            state: "on"
-          - condition: state
-            entity_id: !input trigger_sensor
-            state: "off"
-          - condition: state
-            entity_id: !input light_target
-            state: "on"
-          - action: timer.start
-            alias: "start the timer"
-            data: {}
-            target:
-              entity_id: !input auto_off_timer
+        - condition: trigger
+          alias: "Start the timer - lights on, trigger-off flag enabled, or trigger sensor clears"
+          id:
+            - light-on
+            - trigger-off
+            - auto-off-enabled
+          sequence:
+            - condition: state
+              entity_id: !input auto_off_controller
+              state: "on"
+            - condition: state
+              entity_id: !input trigger_sensor
+              state: "off"
+            - condition: state
+              entity_id: !input light_target
+              state: "on"
+            - action: timer.start
+              alias: "start the timer"
+              data: {}
+              target:
+                entity_id: !input auto_off_timer
       - conditions:
         alias: "Cancel timer - ligts off or trigger-off flag is disabled"
           - condition: trigger
