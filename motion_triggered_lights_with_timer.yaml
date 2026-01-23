@@ -170,27 +170,19 @@ actions:
           - condition: state
             entity_id: !input light_target
             state: "on"
-          - if:
-              - condition: state
-                entity_id: !input trigger_sensor
-                state: "on"
-              - condition: state
-                entity_id: !input auto_off_controller
-                state: "on"
-            then:
-              - action: timer.start
-                metadata: {}
-                data: {}
-                target:
-                  entity_id: !input auto_off_timer
-            else:
-              - action: light.turn_off
-                metadata: {}
-                data:
-                  entity_id: !input light_target
-                  transition: !input off_transition
-                #target:
-                #  entity_id: !input light_target
+          - condition: state
+            entity_id: !input trigger_sensor
+            state: "off"
+          - condition: state
+            entity_id: !input auto_off_controller
+            state: "on"
+          - action: light.turn_off
+            metadata: {}
+            data:
+              entity_id: !input light_target
+              transition: !input off_transition
+            #target:
+            #  entity_id: !input light_target
 
 mode: restart
 max_exceeded: silent
