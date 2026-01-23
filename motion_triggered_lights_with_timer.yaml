@@ -10,9 +10,9 @@ blueprint:
   domain: automation
   author: Scott Menzer
   input:
-    motion_sensor:
-      name: Motion Sensor
-      description: "The motion sensor that triggers the lights."
+    trigger_sensor:
+      name: Trigger Sensor
+      description: "The trigger sensor (motion, occupancy, etc.) that triggers the lights."
       selector:
         entity:
           filter:
@@ -51,13 +51,24 @@ blueprint:
         entity:
           filter:
             domain: timer
+    off_transition:
+      name: Time Off Transition
+      description: >
+        Brightness off transition
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 120
+          step: 1
+          unit_of_measurement: seconds
 
 variables:
   only_when_sun_is_down: !input only_when_sun_is_down
 
 triggers:
   - trigger: state
-    entity_id: !input motion_sensor
+    entity_id: !input trigger_sensor
     to: "on"
     id: motion
   - trigger: state
@@ -77,11 +88,12 @@ triggers:
     entity_id: !input auto_off_controller
     to: "off"
     id: autooffdisabled
-  - trigger: state
-    entity_id: !input auto_off_timer
-    to: idle
-    from: active
+  - trigger: event
+    event_data:
+      entity_id: !input auto_off_timer
+    event_type: timer.finished
     id: timer
+
 conditions: []
 actions:
   - choose:
@@ -110,8 +122,7 @@ actions:
             metadata: {}
             data: {}
             target:
-              entity_id:
-                - !input auto_off_timer
+              entity_id: !input auto_off_timer
       - conditions:
           - condition: trigger
             id:
@@ -124,8 +135,7 @@ actions:
             metadata: {}
             data: {}
             target:
-              entity_id:
-                - !input auto_off_timer
+              entity_id: !input auto_off_timer
       - conditions:
           - condition: trigger
             id:
@@ -160,10 +170,10 @@ actions:
             state: "on"
           - if:
               - condition: state
-                entity_id: !input motion_sensor
+                entity_id: !input trigger_sensor
                 state: "on"
               - condition: state
-                entity_id: !input auto_on_controller
+                entity_id: !input auto_off_controller
                 state: "on"
             then:
               - action: timer.start
@@ -174,9 +184,11 @@ actions:
             else:
               - action: light.turn_off
                 metadata: {}
-                data: {}
-                target:
+                data:
                   entity_id: !input light_target
+                  transition: !input off_transition
+                #target:
+                #  entity_id: !input light_target
 
 mode: restart
 max_exceeded: silent
