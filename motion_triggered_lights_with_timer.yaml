@@ -71,30 +71,34 @@ variables:
 triggers:
   - trigger: state
     entity_id: !input trigger_sensor
+    id: trigger-on
     to: "on"
-    id: motion
+  - trigger: state
+    entity_id: !input trigger_sensor
+    id: trigger-off
+    to: "off"
   - trigger: state
     entity_id: !input light_target
     to: "on"
-    id: lighton
+    id: light-on
   - trigger: state
     entity_id: !input light_target
     to: "off"
     from: "on"
-    id: lightoff
+    id: light-off
   - trigger: state
     entity_id: !input auto_off_controller
     to: "on"
-    id: autooffenabled
+    id: auto-off-enabled
   - trigger: state
     entity_id: !input auto_off_controller
     to: "off"
-    id: autooffdisabled
+    id: auto-off-disabled
   - trigger: event
     event_data:
       entity_id: !input auto_off_timer
     event_type: timer.finished
-    id: timer
+    id: timer-end
 
 conditions: []
 actions:
@@ -102,47 +106,61 @@ actions:
       - conditions:
           - condition: trigger
             id:
-              - motion
+              - trigger-on
         sequence:
-          - condition: state
-            entity_id: !input auto_on_controller
-            state: "on"
-          - condition: or
-            conditions:
-              - condition: sun
-                before: sunrise
-                after: sunset
-              - condition: template
-                value_template: >
-                  {{ only_when_sun_is_down == false }}
-          - action: light.turn_on
-            metadata: {}
-            data: {}
-            target:
-              entity_id: !input light_target
-          - action: timer.start
-            metadata: {}
-            data: {}
-            target:
-              entity_id: !input auto_off_timer
+          # check if auto-on is enabled
+        - condition: state
+          entity_id: !input auto_on_controller
+          state: "on"
+        - condition: state
+          entity_id: !input light_target
+          state: "off"
+          # if after sunset or the sun_down toggle is off
+        - condition: or
+          conditions:
+            - condition: sun
+              before: sunrise
+              after: sunset
+            - condition: template
+              value_template: >
+                {{ only_when_sun_is_down == false }}
+          # turn on the light(s)
+        - action: light.turn_on
+          metadata: {}
+          data: {}
+          target:
+            entity_id: !input light_target
+
+        # light-on and trigger-off will start the timer, if needed
       - conditions:
           - condition: trigger
             id:
-              - lighton
+              - light-on
+              - trigger-off
+              - auto-off-enabled
         sequence:
+          # conditions: auto-off enabled, sensor off, and light is on
+          # action: start the timer
           - condition: state
             entity_id: !input auto_off_controller
             state: "on"
+          - condition: state
+            entity_id: !input trigger_sensor
+            state: "off"
+          - condition: state
+            entity_id: !input light_target
+            state: "on"
           - action: timer.start
             metadata: {}
             data: {}
             target:
               entity_id: !input auto_off_timer
+        # if the light turns off outside automation - or auto-off toggle is disabled, cancel timer
       - conditions:
           - condition: trigger
             id:
-              - lightoff
-              - autooffdisabled
+              - light-off
+              - auto-off-disabled
         sequence:
           - action: timer.cancel
             metadata: {}
@@ -152,20 +170,7 @@ actions:
       - conditions:
           - condition: trigger
             id:
-              - autooffenabled
-        sequence:
-          - condition: state
-            entity_id: !input light_target
-            state: "on"
-          - action: timer.start
-            metadata: {}
-            data: {}
-            target:
-              entity_id: !input auto_off_timer
-      - conditions:
-          - condition: trigger
-            id:
-              - timer
+              - timer-end
         sequence:
           - condition: state
             entity_id: !input light_target
