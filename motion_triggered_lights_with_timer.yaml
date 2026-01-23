@@ -153,6 +153,7 @@ actions:
                     value_template: >
                       {{ only_when_sun_is_down == false }}
             - condition: not
+              alias: If light was turned off within the grace period
               conditions:
                 - condition: state
                   entity_id: !input light_target
@@ -169,7 +170,7 @@ actions:
               entity_id: !input light_target
       - conditions:
           - condition: trigger
-            alias: "Start the timer - lights on, trigger-off flag enabled, or trigger sensor clears"
+            alias: "Start auto-off timer - lights on, trigger-off flag enabled, or trigger sensor clears"
             id:
               - light-on
               - trigger-off
@@ -203,6 +204,7 @@ actions:
               entity_id: !input auto_off_timer
       - conditions:
           - condition: trigger
+            alias: "Turn off lights - timer ends, ligts on, trigger sensor off, and auto-off enabled"
             id:
               - timer-end
         sequence:
@@ -220,7 +222,5 @@ actions:
             data:
               entity_id: !input light_target
               transition: !input off_transition
-            #target:
-            #  entity_id: !input light_target
 
 mode: queued
