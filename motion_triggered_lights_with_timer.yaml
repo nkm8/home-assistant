@@ -64,6 +64,17 @@ blueprint:
           max: 120
           step: 1
           unit_of_measurement: seconds
+    grace_period:
+      name: Grace Period
+      description: >
+        Grace Period after lights off when trigger will turn lights back on
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 120
+          step: 1
+          unit_of_measurement: seconds
 
 variables:
   only_when_sun_is_down: !input only_when_sun_is_down
@@ -120,22 +131,36 @@ actions:
                 data: {}
                 target:
                   entity_id: !input auto_off_timer
-            # check if auto-on is enabled
-          - condition: state
-            entity_id: !input auto_on_controller
-            state: "on"
           - condition: state
             entity_id: !input light_target
             state: "off"
           - condition: or
-            alias: "if after sunset or the sun_down toggle is off"
             conditions:
-              - condition: sun
-                before: sunrise
-                after: sunset
-              - condition: template
-                value_template: >
-                  {{ only_when_sun_is_down == false }}
+            - condition: and
+              conditions:
+              - condition: state
+                entity_id: !input auto_on_controller
+                state: "on"
+              - condition: or
+                alias: "if after sunset or the sun_down toggle is off"
+                conditions:
+                  - condition: sun
+                    before: sunrise
+                    after: sunset
+                  - condition: template
+                    value_template: >
+                      {{ only_when_sun_is_down == false }}
+            - condition:
+              - condition: not
+                conditions:
+                  - condition: state
+                    entity_id: !input light_target
+                    state:
+                      - "off"
+                    for:
+                      hours: 0
+                      minutes: 0
+                      seconds: 5
           - action: light.turn_on
             alias: "turn on the light(s)"
             data: {}
