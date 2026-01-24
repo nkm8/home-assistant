@@ -26,6 +26,7 @@ blueprint:
       description: "The light entity to control."
       selector:
         entity:
+          multiple: true
           filter:
             domain: light
     auto_on_controller:
