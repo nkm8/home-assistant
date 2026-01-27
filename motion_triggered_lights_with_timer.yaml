@@ -194,11 +194,27 @@ actions:
             target:
               entity_id: !input auto_off_timer
       - conditions:
-          - condition: trigger
-            alias: "Cancel timer - ligts off or trigger-off flag is disabled"
-            id:
-              - light-off
-              - auto-off-disabled
+          - condition: or
+            alias: "Cancel timer - all lights off or trigger-off flag is disabled"
+            conditions:
+            - condition: trigger
+              alias: "trigger-off flag is disabled"
+              id:
+                - auto-off-disabled
+            - condition: and
+              conditions:
+              - condition: trigger
+                alias: "single light is off"
+                id:
+                  - light-off
+                # this check is unnecessary for a single light target, but won't hurt
+                # it is necessary for 2 or more light targets
+              - condition: state
+                alias: "Check that all lights are off"
+                entity_id: !input light_target
+                state: "on"
+                # I don't know what the default 'match' value is, but we want to match on all lights being off
+                # match: any
         sequence:
           - action: timer.cancel
             metadata: {}
