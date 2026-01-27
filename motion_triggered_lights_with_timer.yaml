@@ -136,6 +136,7 @@ actions:
                   entity_id: !input auto_off_timer
           - condition: state
             entity_id: !input light_target
+            match: any
             state: "off"
           - condition: or
             conditions:
@@ -158,8 +159,8 @@ actions:
               conditions:
                 - condition: state
                   entity_id: !input light_target
-                  state:
-                    - "off"
+                  state: "off"
+                  match: any
                   for:
                     hours: 0
                     minutes: 0
@@ -186,6 +187,7 @@ actions:
           - condition: state
             entity_id: !input light_target
             state: "on"
+            match: any
           - action: timer.start
             alias: "start the timer"
             data: {}
@@ -211,6 +213,7 @@ actions:
         sequence:
           - condition: state
             entity_id: !input light_target
+            match: any
             state: "on"
           - condition: state
             entity_id: !input trigger_sensor
