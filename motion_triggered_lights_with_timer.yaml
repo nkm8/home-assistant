@@ -98,7 +98,6 @@ triggers:
   - trigger: state
     entity_id: !input light_target
     to: "off"
-    from: "on"
     id: light-off
   - trigger: state
     entity_id: !input auto_off_controller
@@ -212,7 +211,7 @@ actions:
               - condition: state
                 alias: "Check that all lights are off"
                 entity_id: !input light_target
-                state: "on"
+                state: "off"
                 # I don't know what the default 'match' value is, but we want to match on all lights being off
                 # match: any
         sequence:
