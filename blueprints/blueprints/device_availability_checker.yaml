@@ -1,238 +1,101 @@
 blueprint:
-  name: Device Availability Checker
-  description: |2
-    Checks all entities/devices for availability, and all entities/devices
-    with the 'battery' device_class for battery level.
-
-    Devices/entities that are not assigned to an area, 
-        or are assigned to areas where the name begins with an underscore (_), 
-        or are explicitly excluded, will not be monitored.
-    To monitor devices that are not fixed to a specific area, simply create a pseudo-area, such as "Roaming" or "Nowhere" and add the devices to that area.
+  name: Device Availability Checker (with Label Exclusions)
+  description: |
+    Checks all entities/devices for availability and battery level. 
+    Excludes devices by area (names starting with _), explicit exclusion list, and now by a specific Label.
   domain: automation
-  source_url: https://raw.githubusercontent.com/briped/homeassistant/master/blueprints/device_availability_checker.yaml
   input:
     check_battery:
       name: Battery warning level
-      description: Devices with battery level below the configured value, are assumed to be low-battery (as well as binary battery sensors with value 'on').
+      description: Devices with battery level below this value are considered low.
       default: 20
       selector:
         number:
-          min: 5.0
-          max: 100.0
+          min: 5
+          max: 100
           unit_of_measurement: "%"
-          mode: slider
-          step: 5.0
-    check_unavailable:
-      name: Check Unvailable?
-      description: Also return entities/devices that are unavailable.
-      default: false
+    exclude_label:
+      name: Exclude by Label
+      description: Entities or devices with this label will be ignored.
+      default: []
       selector:
-        boolean:
-    trigger_time:
-      name: Time of the day(s) to checks.
-      description: Checks are run at the specified time of the day.
-      default: "10:00:00"
-      selector:
-        time:
-    trigger_day:
-      name: Day(s) of the week to checks.
-      description: Checks are run on the selected day(s) of the week.
-      default:
-        - "1" # Monday
-        - "2" # Tuesday
-        - "3" # Wednesday
-        - "4" # Thursday
-        - "5" # Friday
-        - "6" # Saturday
-        - "7" # Sunday
-      selector:
-        select:
-          mode: dropdown
+        label:
           multiple: true
-          custom_value: false
-          options:
-            - label: Monday
-              value: "1"
-            - label: Tuesday
-              value: "2"
-            - label: Wednesday
-              value: "3"
-            - label: Thursday
-              value: "4"
-            - label: Friday
-              value: "5"
-            - label: Saturday
-              value: "6"
-            - label: Sunday
-              value: "7"
+    # Existing exclusion input
     exclude:
       name: Exclusions
-      description: Areas/devices/entities to exclude from monitoring.
-      default: []
+      description: Entities, devices or areas to ignore.
+      default:
+        entity_id: []
+        device_id: []
+        area_id: []
       selector:
         target:
     actions:
       name: Actions
-      description: Actions to run, such as notifications. Matched devices are returned with the <code>{{items}}</code> dictionary.
+      description: Notifications or actions to run if issues are found.
       selector:
-        action:
+        action: {}
+
+mode: restart
+
 variables:
-  trigger_day: !input trigger_day
+  # Capture inputs
   check_battery: !input check_battery
-  check_unavailable: !input check_unavailable
   exclude: !input exclude
+  exclude_labels: !input exclude_label
+  
+  # Logic to build the list of excluded entities from the selected labels
+  label_excluded_entities: >
+    {% set entities = ns(ids=[]) %}
+    {% for label in exclude_labels %}
+      {% set entities.ids = entities.ids + label_entities(label) %}
+    {% endfor %}
+    {{ entities.ids }}
+
   items: >
-    {% set entities = namespace(data=[]) %}
-    {% set devices = namespace(data=[]) %}
-
-    {% if check_unavailable is defined 
-      and check_unavailable == true %}
-      {# Loop through all entities with state == unavailable. #}
-      {% for state in states 
-        | selectattr('state', 'eq', 'unavailable') %}
-        {% set add_entity = true %}
-        {% if area_id(state.entity_id) == None
-          or area_name(state.entity_id)[0:1] == '_' %}
-          {% set add_entity = false %}
+    {# Initial collection of potential entities #}
+    {% set entities = states.sensor 
+      | selectattr('attributes.device_class', 'defined')
+      | selectattr('attributes.device_class', 'eq', 'battery')
+      | map(attribute='entity_id') | list 
+      + states.binary_sensor
+      | selectattr('attributes.device_class', 'defined')
+      | selectattr('attributes.device_class', 'eq', 'battery')
+      | map(attribute='entity_id') | list %}
+    
+    {% set ns = namespace(sensors=[]) %}
+    {% for ent in entities %}
+      {% set dev_id = device_id(ent) %}
+      {% set a_id = area_id(ent) %}
+      
+      {# Filter Logic #}
+      {% set is_excluded = ent in exclude.entity_id 
+        or dev_id in exclude.device_id 
+        or a_id in exclude.area_id
+        or ent in label_excluded_entities
+        or (a_id and area_name(a_id).startswith('_')) %}
+        
+      {% if not is_excluded %}
+        {# Battery Logic #}
+        {% set s = states(ent) %}
+        {% if s in ['unavailable', 'unknown'] %}
+          {% set ns.sensors = ns.sensors + [{'device_id': dev_id, 'device_name': device_attr(dev_id, 'name_by_user') or device_attr(dev_id, 'name'), 'area_id': a_id, 'state': s}] %}
+        {% elif s | is_number and s | float < check_battery %}
+          {% set ns.sensors = ns.sensors + [{'device_id': dev_id, 'device_name': device_attr(dev_id, 'name_by_user') or device_attr(dev_id, 'name'), 'area_id': a_id, 'state': s}] %}
         {% endif %}
-        {% if exclude is defined %}
-          {% if exclude.entity_id is defined 
-            and state.entity_id in exclude.entity_id %}
-            {% set add_entity = false %}
-          {% endif %}
-          {% if exclude.area_id is defined 
-            and area_id(state.entity_id) in exclude.area_id %}
-            {% set add_entity = false %}
-          {% endif %}
-        {% endif %}
-
-        {% if add_entity == true %}
-          {# Add found entities to array. #}
-          {% set entities.data = entities.data 
-            + [{'entity_id': state.entity_id, 
-                'device_id': device_id(state.entity_id), 
-                'area_id': area_id(state.entity_id), 
-                'state': state.state}] %}
-        {% endif %}
-      {% endfor %}
-    {% endif %}
-
-    {# Loop through all binary_sensor entities with the 'battery' device_class. #}
-    {% for state in states.binary_sensor 
-      | rejectattr('attributes.device_class', 'undefined') 
-      | selectattr('attributes.device_class', 'eq', 'battery') 
-      | selectattr('state', 'eq', 'on') %}
-      {% set add_entity = true %}
-      {% if area_id(state.entity_id) == None
-        or area_name(state.entity_id)[0:1] == '_' %}
-        {% set add_entity = false %}
-      {% endif %}
-      {% if exclude is defined %}
-        {% if exclude.entity_id is defined 
-          and state.entity_id in exclude.entity_id %}
-          {% set add_entity = false %}
-        {% endif %}
-        {% if exclude.area_id is defined 
-          and area_id(state.entity_id) in exclude.area_id %}
-          {% set add_entity = false %}
-        {% endif %}
-      {% endif %}
-
-      {% if add_entity == true %}
-        {# Add found entities to array. #}
-        {% set entities.data = entities.data 
-          + [{'entity_id': state.entity_id, 
-              'device_id': device_id(state.entity_id), 
-              'area_id': area_id(state.entity_id), 
-              'state': state.state}] %}
       {% endif %}
     {% endfor %}
+    {{ ns.sensors }}
 
-    {# Loop through all sensor entities with the 'battery' device_class. #}
-    {% for state in states.sensor
-      | rejectattr('state', 'eq', 'unavailable') 
-      | rejectattr('attributes.device_class', 'undefined') 
-      | selectattr('attributes.device_class', 'eq', 'battery') %}
-      {% set add_entity = true %}
-      {% if area_id(state.entity_id) == None
-        or area_name(state.entity_id)[0:1] == '_' %}
-        {% set add_entity = false %}
-      {% endif %}
-      {% if exclude is defined %}
-        {% if exclude.entity_id is defined 
-          and state.entity_id in exclude.entity_id %}
-          {% set add_entity = false %}
-        {% endif %}
-        {% if exclude.area_id is defined 
-          and area_id(state.entity_id) in exclude.area_id %}
-          {% set add_entity = false %}
-        {% endif %}
-      {% endif %}
-      {% if check_battery is defined
-        and (state.state | int(-1)) >= (check_battery | int(0)) %}
-        {% set add_entity = false %}
-      {% endif %}
-
-      {% if add_entity == true %}
-        {# Add found entities to array. #}
-        {% set entities.data = entities.data + 
-          [{'entity_id': state.entity_id, 
-            'device_id': device_id(state.entity_id), 
-            'area_id': area_id(state.entity_id), 
-            'state': state.state}] %}
-      {% endif %}
-    {% endfor %}
-
-    {# Loop through all unique devices from the entities array. #}
-    {% for entity in entities.data 
-      | unique(attribute='device_id') %}
-      {% set add_entity = true %}
-      {% if area_id(entity.device_id) == None 
-        or area_name(entity.device_id)[0:1] == '_' %}
-        {% set add_entity = false %}
-      {% endif %}
-      {% if exclude is defined %}
-        {% if exclude.device_id is defined 
-          and entity.device_id in exclude.device_id %}
-          {% set add_entity = false %}
-        {% endif %}
-        {% if exclude.area_id is defined 
-          and area_id(entity.device_id) in exclude.area_id %}
-          {% set add_entity = false %}
-        {% endif %}
-      {% endif %}
-      {% if check_battery is defined
-        and (entity.state | int(-1)) >= (check_battery | int(0)) %}
-        {% set add_entity = false %}
-      {% endif %}
-
-      {% if add_entity == true %}
-        {# Set default friendly_name. #}
-        {% set device_friendly_name = device_attr(entity.device_id, 'name') %}
-        {% if state_attr(entity.entity_id, 'friendly_name') %}
-          {# Set to entity friendly_name. #}
-          {% set device_friendly_name = state_attr(entity.entity_id, 'friendly_name') %}
-        {% endif %}
-        {% if device_attr(entity.device_id, 'name_by_user') %}
-          {# Set to user given friendly_name. #}
-          {% set device_friendly_name = device_attr(entity.device_id, 'name_by_user') %}
-        {% endif %}
-        {# Add device to array. #}
-        {% set devices.data = devices.data 
-          + [{'device_id': entity.device_id, 
-              'device_name': device_attr(entity.entity_id, 'name'), 
-              'friendly_name': device_friendly_name, 
-              'area_id': area_id(entity.entity_id), 
-              'state': entity.state}] %}
-      {% endif %}
-    {% endfor %}
-    {{devices.data}}
 trigger:
   - platform: time
-    at: !input trigger_time
+    at: "08:00:00" # Example daily check
+
 condition:
-  - "{{ ((items | length) > 0) and ((now().isoweekday() | int(0)) == (trigger_day[now().isoweekday()-1] | int(0))) }}"
+  - condition: template
+    value_template: "{{ items | count > 0 }}"
+
 action:
   - choose: []
     default: !input actions
-mode: single
