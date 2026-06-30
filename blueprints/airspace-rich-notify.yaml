@@ -44,7 +44,7 @@ action:
   - action: !input notify_action
     data:
       title: >-
-        Airspace - {{ notification_title }} - {% set a = trigger.entity_id -%} 🚨 {{
+        Airspace - {{ notification_title }} - {% set a = trigger.entity_id -%} ✈️ {{
         state_attr(a, 'flight') or hex }}{{ ' · ' ~
         state_attr(a, 'aircraft_type') if state_attr(a, 'aircraft_type') }}
       message: >-
