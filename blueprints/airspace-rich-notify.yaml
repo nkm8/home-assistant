@@ -1,0 +1,71 @@
+blueprint:
+  name: Airspace · rich notify
+  description: >-
+    Sends a rich notification (title, distance/bearing/altitude/squawk, image,
+    and tap-through link) when a chosen airspace-alert binary_sensor turns on.
+    Designed for sensors like those produced by an ADS-B/airspace tracker
+    integration that expose flight, hex, aircraft_type, distance_to, bearing_to,
+    alt_baro_ft, squawk, and entity_picture attributes.
+  domain: automation
+  source_url: https://www.home-assistant.io/docs/blueprint/
+  input:
+    alert_sensor:
+      name: Airspace Alert Sensor
+      description: The binary_sensor that turns "on" when a military aircraft is nearby.
+      selector:
+        entity:
+          domain: binary_sensor
+    notify_action:
+      name: Notify Service
+      description: >-
+        The notify entity/service to send the rich notification to (e.g. a
+        mobile app notify service such as notify.nick_devices).
+      selector:
+        entity:
+          domain: notify
+    dashboard_path:
+      name: Dashboard Path
+      description: >-
+        Path used for the notification's tap-through and click actions
+        (e.g. /lovelace/dashboard-airplanes/0).
+      default: /lovelace/dashboard-airplanes/0
+      selector:
+        text: {}
+    interruption_level:
+      name: iOS Interruption Level
+      description: Controls how the notification interrupts on iOS devices.
+      default: time-sensitive
+      selector:
+        select:
+          options:
+            - "passive"
+            - "active"
+            - "time-sensitive"
+            - "critical"
+
+trigger:
+  - trigger: state
+    entity_id: !input alert_sensor
+    to: "on"
+
+action:
+  - action: !input notify_action
+    data:
+      title: >-
+        {% set a = trigger.entity_id -%} 🚨 {{
+        state_attr(a, 'flight') or state_attr(a, 'hex') }}{{ ' · ' ~
+        state_attr(a, 'aircraft_type') if state_attr(a, 'aircraft_type') }}
+      message: >-
+        {% set a = trigger.entity_id -%} {% set d =
+        (state_attr(a, 'distance_to') or {}).get('home') -%} {% set b =
+        (state_attr(a, 'bearing_to') or {}).get('home') -%} {{ '%.1f
+        nm'|format(d) if d is not none else '? nm' }} {{ 'brg
+        %d°'|format(b|round(0)|int) if b is not none else '' }} · {{
+        state_attr(a, 'alt_baro_ft') or '?' }} ft {% if state_attr(a, 'squawk')
+        %}· squawk {{ state_attr(a, 'squawk') }}{% endif %}
+      data:
+        image: "{{ state_attr(trigger.entity_id, 'entity_picture') }}"
+        clickAction: !input dashboard_path
+        url: !input dashboard_path
+        push:
+          interruption-level: !input interruption_level
