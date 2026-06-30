@@ -38,7 +38,7 @@ trigger:
 
 variables:
   notification_title: !input notification_title
-  hex: state_attr(trigger.entity_id, 'hex')
+  hex: "{{ state_attr(trigger.entity_id, 'hex') }}"
 
 action:
   - action: !input notify_action
