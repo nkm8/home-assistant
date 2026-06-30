@@ -23,12 +23,11 @@ blueprint:
       default: notify.notify
       selector:
         text: {}
-    dashboard_path:
-      name: Dashboard Path
+    notification_title:
+      name: Notification Title
       description: >-
-        Path used for the notification's tap-through and click actions
-        (e.g. /lovelace/dashboard-airplanes/0).
-      default: /lovelace/dashboard-airplanes/0
+        Notification title
+      default: Airspace
       selector:
         text: {}
 
@@ -37,12 +36,16 @@ trigger:
     entity_id: !input alert_sensor
     to: "on"
 
+variables:
+  notification_title: !input notification_title
+  hex: state_attr(trigger.entity_id, 'hex')
+
 action:
   - action: !input notify_action
     data:
       title: >-
-        {% set a = trigger.entity_id -%} 🚨 {{
-        state_attr(a, 'flight') or state_attr(a, 'hex') }}{{ ' · ' ~
+        Airspace - {{ notification_title }} - {% set a = trigger.entity_id -%} 🚨 {{
+        state_attr(a, 'flight') or hex }}{{ ' · ' ~
         state_attr(a, 'aircraft_type') if state_attr(a, 'aircraft_type') }}
       message: >-
         {% set a = trigger.entity_id -%} {% set d =
@@ -54,5 +57,6 @@ action:
         %}· squawk {{ state_attr(a, 'squawk') }}{% endif %}
       data:
         image: "{{ state_attr(trigger.entity_id, 'entity_picture') }}"
-        clickAction: !input dashboard_path
-        url: !input dashboard_path
+        channel: airspace
+        clickAction: "https://globe.adsbexchange.com/?icao={{ hex }}"
+        url: "https://globe.adsbexchange.com/?icao={{ hex }}"
