@@ -7,7 +7,7 @@ blueprint:
     integration that expose flight, hex, aircraft_type, distance_to, bearing_to,
     alt_baro_ft, squawk, and entity_picture attributes.
   domain: automation
-  source_url: https://www.home-assistant.io/docs/blueprint/
+  source_url: https://github.com/nkm8/home-assistant/blob/main/blueprints/airspace-rich-notify.yaml
   input:
     alert_sensor:
       name: Airspace Alert Sensor
@@ -58,5 +58,6 @@ action:
       data:
         image: "{{ state_attr(trigger.entity_id, 'entity_picture') }}"
         channel: airspace
+        group: Airspace
         clickAction: "https://globe.adsbexchange.com/?icao={{ hex }}"
         url: "https://globe.adsbexchange.com/?icao={{ hex }}"
