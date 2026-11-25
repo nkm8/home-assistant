@@ -58,5 +58,6 @@ action:
       data:
         image: "{{ state_attr(trigger.entity_id, 'entity_picture') }}"
         channel: airspace
+        group: Airspace
         clickAction: "https://globe.adsbexchange.com/?icao={{ hex }}"
         url: "https://globe.adsbexchange.com/?icao={{ hex }}"
